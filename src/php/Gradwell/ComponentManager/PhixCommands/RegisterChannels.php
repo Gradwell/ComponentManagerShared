@@ -183,6 +183,16 @@ class RegisterChannels extends CommandBase implements CommandInterface
                         }
                 }
 
+                // do not forget the channel that the package itself
+                // uses
+                $channel = (string) $xml->channel;
+                if (!isset($channels[$channel]))
+                {
+                        $rawChannelXml = file_get_contents('http://' . $channel . '/channel.xml');
+                        $channelXml = simplexml_load_string($rawChannelXml);
+                        $channels[$channel] = (string) $channelXml->suggestedalias;
+                }
+
                 return $channels;
         }
 
