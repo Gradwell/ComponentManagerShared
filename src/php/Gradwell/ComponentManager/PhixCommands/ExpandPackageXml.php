@@ -187,6 +187,12 @@ class ExpandPackageXml extends CommandBase implements CommandInterface
                         'www'   => 'www'
                 );
 
+                $blacklist = array (
+                        '.empty'        => true,
+                        '.DS_Store'     => true,
+                        '.svn'          => true
+                );
+
                 foreach ($roles as $dir => $role)
                 {
                         $searchFolder = $srcFolder . DIRECTORY_SEPARATOR . $dir;
@@ -204,6 +210,12 @@ class ExpandPackageXml extends CommandBase implements CommandInterface
                         {
                                 // skip all directories
                                 if ($direntry->isDir())
+                                {
+                                        continue;
+                                }
+
+                                // skip all blacklisted files
+                                if (isset($blacklist[$direntry->getPathname()]))
                                 {
                                         continue;
                                 }
