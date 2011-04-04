@@ -214,13 +214,16 @@ class ExpandPackageXml extends CommandBase implements CommandInterface
                                         continue;
                                 }
 
+                                $filename = \str_replace($searchFolder, '', $direntry->getPathname());
+
+                                // var_dump($filename);
+                                
                                 // skip all blacklisted files
-                                if (isset($blacklist[$direntry->getPathname()]))
+                                if (isset($blacklist[basename($filename)]))
                                 {
                                         continue;
                                 }
 
-                                $filename = \str_replace($searchFolder, '', $direntry->getPathname());
                                 $md5sum   = \md5(file_get_contents($direntry->getPathname()));
 				$return .= '      <file baseinstalldir="/" md5sum="' . $md5sum . '" name="' . $filename . '" role="' . $role . '"';
 
