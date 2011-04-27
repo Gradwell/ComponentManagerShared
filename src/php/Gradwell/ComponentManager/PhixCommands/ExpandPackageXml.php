@@ -95,6 +95,13 @@ class ExpandPackageXml extends CommandBase implements CommandInterface
                         ->setArgHasDefaultValueOf('src')
                         ->setArgValidator(new MustBeValidPath());
 
+                $options->addSwitch('packageFolder', 'specify the top-level folder of the package')
+                        ->setWithShortSwitch('P')
+                        ->setWithLongSwitch('packageFolder')
+                        ->setWithRequiredArg('<folder>', 'thepath to the top-level folder of the package')
+                        ->setArgHasDefaultValueOf('.')
+                        ->setArgValidator(new MustBeValidPath());
+
                 return $options;
         }
 
@@ -129,12 +136,13 @@ class ExpandPackageXml extends CommandBase implements CommandInterface
                 $buildPropertiesFile = $parsedSwitches->getFirstArgForSwitch('properties');
                 $packageXmlFile      = $parsedSwitches->getFirstArgForSwitch('packageXml');
                 $srcFolder           = $parsedSwitches->getFirstArgForSwitch('srcFolder');
+                $packageFolder       = $parsedSwitches->getFirstArgForSwitch('packageFolder');
 
                 // step 4: let's get it on
-                return $this->populatePackageXmlFile($context, $buildPropertiesFile, $packageXmlFile, $srcFolder);
+                return $this->populatePackageXmlFile($context, $buildPropertiesFile, $packageXmlFile, $srcFolder, $packageFolder);
         }
 
-        protected function populatePackageXmlFile(Context $context, $buildPropertiesFile, $packageXmlFile, $srcFolder)
+        protected function populatePackageXmlFile(Context $context, $buildPropertiesFile, $packageXmlFile, $srcFolder, $packageFolder)
         {
                 // load the files we are going to manipulate
                 $rawBuildProperties = $this->loadBuildProperties($context, $buildPropertiesFile);
@@ -150,7 +158,7 @@ class ExpandPackageXml extends CommandBase implements CommandInterface
                 $buildProperties['${build.time}'] = date('H:i:s');
 
                 // generate a list of the files to add
-                $buildProperties['${contents}']   = $this->calculateFilesList($context, $srcFolder);
+                $buildProperties['${contents}']   = $this->calculateFilesList($context, $srcFolder, $packageFolder);
 
                 // do the replacement
                 $newXml = str_replace(array_keys($buildProperties), $buildProperties, $rawXml);
@@ -174,7 +182,7 @@ class ExpandPackageXml extends CommandBase implements CommandInterface
                 return file_get_contents($packageXmlFile);
         }
 
-        protected function calculateFilesList(Context $context, $srcFolder)
+        protected function calculateFilesList(Context $context, $srcFolder, $packageFolder)
         {
                 $return = '';
 
@@ -228,40 +236,81 @@ class ExpandPackageXml extends CommandBase implements CommandInterface
 				$return .= '      <file baseinstalldir="/" md5sum="' . $md5sum . '" name="' . $filename . '" role="' . $role . '"';
 
 				// do we need tasks for this file?
-                                //
-                                // IMPORTANT:
-                                //
-                                // We *deliberately* break up the @@ tokens below to
-                                // make sure that pear does not replace them when
-                                // this file is installed
-				switch($role)
-				{
-					case 'php':
-                                        case 'test':
-						// do something here
-						$return .= ">\n"
-							. '        <tasks:replace from="@' . '@PACKAGE_VERSION@@" to="version" type="package-info" />' . "\n"
-							. '        <tasks:replace from="@' . '@PHP_DIR@@" to="php_dir" type="pear-config" />' . "\n"
-							. '        <tasks:replace from="@' . '@DATA_DIR@@" to="data_dir" type="pear-config" />' . "\n"
-							. "      </file>\n";
-						break;
+                                $return .= $this->getTasksForRole($role);
 
-					case 'script':
-						// do something here
-						$return .= ">\n"
-							. '        <tasks:replace from="@' . '@PACKAGE_VERSION@@" to="version" type="package-info" />' . "\n"
-							. '        <tasks:replace from="/usr/bin/env php" to="php_bin" type="pear-config" />' . "\n"
-							. '        <tasks:replace from="@' . '@PHP_BIN@@" to="php_bin" type="pear-config" />' . "\n"
-							. '        <tasks:replace from="@' . '@BIN_DIR@@" to="bin_dir" type="pear-config" />' . "\n"
-							. '        <tasks:replace from="@' . '@PHP_DIR@@" to="php_dir" type="pear-config" />' . "\n"
-							. '        <tasks:replace from="@' . '@DATA_DIR@@" to="data_dir" type="pear-config" />' . "\n"
-							. "      </file>\n";
-						break;
-
-					default:
-						$return .= "/>\n";
-				}
+                                // close the tag
+                                $return .= "      </file>\n";
                         }
+                }
+
+                // we also explicitly add any doc files that can be found
+                // in the top-level folder
+                $dh = dir($packageFolder);
+
+                while ($filename = $dh->read())
+                {
+                        $fqFilename = $packageFolder . DIRECTORY_SEPARATOR . $filename;
+                        // skip folders
+                        if (is_dir($fqFilename))
+                        {
+                                continue;
+                        }
+
+                        // skip files that do not interest us
+                        if (!preg_match('/.+\.txt$|.+\.md$/', $filename))
+                        {
+                                continue;
+                        }
+
+                        // if we get here, we want this file in our list
+                        $md5sum   = \md5(file_get_contents($fqFilename));
+                        $return .= '      <file baseinstalldir="/" md5sum="' . $md5sum . '" name="' . $filename . '" role="doc"';
+
+                        // do we need tasks for this file?
+                        $return .= $this->getTasksForRole('doc');
+
+                        // close the tag
+                        $return .= "      </file>\n";
+                }
+
+                // all done
+                return $return;
+        }
+
+        protected function getTasksForRole($role)
+        {
+                $return = "";
+
+                // IMPORTANT:
+                //
+                // We *deliberately* break up the @@ tokens below to
+                // make sure that pear does not replace them when
+                // this file is installed
+                switch($role)
+                {
+                        case 'php':
+                        case 'test':
+                        case 'doc':
+                                // do something here
+                                $return .= ">\n"
+                                        . '        <tasks:replace from="@' . '@PACKAGE_VERSION@@" to="version" type="package-info" />' . "\n"
+                                        . '        <tasks:replace from="@' . '@PHP_DIR@@" to="php_dir" type="pear-config" />' . "\n"
+                                        . '        <tasks:replace from="@' . '@DATA_DIR@@" to="data_dir" type="pear-config" />' . "\n";
+                                break;
+
+                        case 'script':
+                                // do something here
+                                $return .= ">\n"
+                                        . '        <tasks:replace from="@' . '@PACKAGE_VERSION@@" to="version" type="package-info" />' . "\n"
+                                        . '        <tasks:replace from="/usr/bin/env php" to="php_bin" type="pear-config" />' . "\n"
+                                        . '        <tasks:replace from="@' . '@PHP_BIN@@" to="php_bin" type="pear-config" />' . "\n"
+                                        . '        <tasks:replace from="@' . '@BIN_DIR@@" to="bin_dir" type="pear-config" />' . "\n"
+                                        . '        <tasks:replace from="@' . '@PHP_DIR@@" to="php_dir" type="pear-config" />' . "\n"
+                                        . '        <tasks:replace from="@' . '@DATA_DIR@@" to="data_dir" type="pear-config" />' . "\n";
+                                break;
+
+                        default:
+                                // do nothing
                 }
 
                 return $return;
