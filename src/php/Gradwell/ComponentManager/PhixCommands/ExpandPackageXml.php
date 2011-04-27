@@ -233,7 +233,7 @@ class ExpandPackageXml extends CommandBase implements CommandInterface
                                 }
 
                                 $md5sum   = \md5(file_get_contents($direntry->getPathname()));
-				$return .= '      <file baseinstalldir="/" md5sum="' . $md5sum . '" name="' . $filename . '" role="' . $role . '"';
+				$return .= '      <file baseinstalldir="/" md5sum="' . $md5sum . '" name="' . $filename . '" role="' . $role . '">';
 
 				// do we need tasks for this file?
                                 $return .= $this->getTasksForRole($role);
@@ -264,7 +264,7 @@ class ExpandPackageXml extends CommandBase implements CommandInterface
 
                         // if we get here, we want this file in our list
                         $md5sum   = \md5(file_get_contents($fqFilename));
-                        $return .= '      <file baseinstalldir="/" md5sum="' . $md5sum . '" name="' . $filename . '" role="doc"';
+                        $return .= '      <file baseinstalldir="/" md5sum="' . $md5sum . '" name="' . $filename . '" role="doc">';
 
                         // do we need tasks for this file?
                         $return .= $this->getTasksForRole('doc');
@@ -292,21 +292,19 @@ class ExpandPackageXml extends CommandBase implements CommandInterface
                         case 'test':
                         case 'doc':
                                 // do something here
-                                $return .= ">\n"
-                                        . '        <tasks:replace from="@' . '@PACKAGE_VERSION@@" to="version" type="package-info" />' . "\n"
-                                        . '        <tasks:replace from="@' . '@PHP_DIR@@" to="php_dir" type="pear-config" />' . "\n"
-                                        . '        <tasks:replace from="@' . '@DATA_DIR@@" to="data_dir" type="pear-config" />' . "\n";
+                                $return .= '        <tasks:replace from="@' . '@PACKAGE_VERSION@@" to="version" type="package-info" />' . "\n"
+                                        .  '        <tasks:replace from="@' . '@PHP_DIR@@" to="php_dir" type="pear-config" />' . "\n"
+                                        .  '        <tasks:replace from="@' . '@DATA_DIR@@" to="data_dir" type="pear-config" />' . "\n";
                                 break;
 
                         case 'script':
                                 // do something here
-                                $return .= ">\n"
-                                        . '        <tasks:replace from="@' . '@PACKAGE_VERSION@@" to="version" type="package-info" />' . "\n"
-                                        . '        <tasks:replace from="/usr/bin/env php" to="php_bin" type="pear-config" />' . "\n"
-                                        . '        <tasks:replace from="@' . '@PHP_BIN@@" to="php_bin" type="pear-config" />' . "\n"
-                                        . '        <tasks:replace from="@' . '@BIN_DIR@@" to="bin_dir" type="pear-config" />' . "\n"
-                                        . '        <tasks:replace from="@' . '@PHP_DIR@@" to="php_dir" type="pear-config" />' . "\n"
-                                        . '        <tasks:replace from="@' . '@DATA_DIR@@" to="data_dir" type="pear-config" />' . "\n";
+                                $return .= '        <tasks:replace from="@' . '@PACKAGE_VERSION@@" to="version" type="package-info" />' . "\n"
+                                        .  '        <tasks:replace from="/usr/bin/env php" to="php_bin" type="pear-config" />' . "\n"
+                                        .  '        <tasks:replace from="@' . '@PHP_BIN@@" to="php_bin" type="pear-config" />' . "\n"
+                                        .  '        <tasks:replace from="@' . '@BIN_DIR@@" to="bin_dir" type="pear-config" />' . "\n"
+                                        .  '        <tasks:replace from="@' . '@PHP_DIR@@" to="php_dir" type="pear-config" />' . "\n"
+                                        .  '        <tasks:replace from="@' . '@DATA_DIR@@" to="data_dir" type="pear-config" />' . "\n";
                                 break;
 
                         default:
